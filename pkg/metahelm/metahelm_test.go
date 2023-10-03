@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -81,6 +82,35 @@ var testChartsLongReleaseNames = []Chart{
 	Chart{
 		Title:                      "redis",
 		Location:                   "testdata/chart",
+		DeploymentHealthIndication: IgnorePodHealth,
+	},
+}
+
+var testChartsCapitalized = []Chart{
+	Chart{
+		Title:                      "Toplevel",
+		Location:                   "Testdata/chart",
+		WaitUntilDeployment:        "Toplevel",
+		DeploymentHealthIndication: IgnorePodHealth,
+		DependencyList:             []string{"SomeService", "anotherThing", "REDIS"},
+	},
+	Chart{
+		Title:                      "SomeService",
+		Location:                   "Testdata/chart",
+		WaitUntilDeployment:        "SomeService",
+		DeploymentHealthIndication: IgnorePodHealth,
+	},
+	Chart{
+		Title:                      "anotherThing",
+		Location:                   "Testdata/chart",
+		WaitUntilDeployment:        "anotherThing",
+		DeploymentHealthIndication: AllPodsHealthy,
+		WaitTimeout:                2 * time.Second,
+		DependencyList:             []string{"REDIS"},
+	},
+	Chart{
+		Title:                      "REDIS",
+		Location:                   "Testdata/chart",
 		DeploymentHealthIndication: IgnorePodHealth,
 	},
 }
@@ -246,6 +276,23 @@ func TestGraphInstallLongReleaseName(t *testing.T) {
 	}
 	ChartWaitPollInterval = 1 * time.Second
 	rm, err := m.Install(context.Background(), testChartsLongReleaseNames, WithReleaseNamePrefix(prefix))
+	if err != nil {
+		t.Fatalf("error installing: %v", err)
+	}
+	t.Logf("rm: %v\n", rm)
+}
+
+func TestGraphInstallCapitalized(t *testing.T) {
+	prefix := "metahelm-test-prefix-"
+	fkc := fakeKubernetesClientset(t, DefaultK8sNamespace, testChartsCapitalized)
+	cfg := fakeHelmConfiguration(t)
+	m := Manager{
+		LogF: t.Logf,
+		K8c:  fkc,
+		HCfg: cfg,
+	}
+	ChartWaitPollInterval = 1 * time.Second
+	rm, err := m.Install(context.Background(), testChartsCapitalized, WithReleaseNamePrefix(prefix))
 	if err != nil {
 		t.Fatalf("error installing: %v", err)
 	}
@@ -546,6 +593,9 @@ func TestReleaseName(t *testing.T) {
 			"short", "some-release-name",
 		},
 		{
+			"capitalized", "Capitalized-Release-Name",
+		},
+		{
 			"long", "this-is-an-exceedingly-long-release-name-that-would-fail-installation",
 		},
 		{
@@ -563,6 +613,11 @@ func TestReleaseName(t *testing.T) {
 			}
 			if out == "" {
 				t.Fatalf("blank output")
+			}
+			for _, c := range out {
+				if unicode.IsLetter(c) && unicode.IsUpper(c) {
+					t.Fatalf("capitalization not sanitized")
+				}
 			}
 		})
 	}

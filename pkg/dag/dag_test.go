@@ -2,7 +2,6 @@ package dag
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"sync"
@@ -341,7 +340,7 @@ func TestDAGDot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dot failed: %v", err)
 	}
-	if err = ioutil.WriteFile("./testcharts.dot", b, os.ModePerm); err != nil {
+	if err = os.WriteFile("./testcharts.dot", b, os.ModePerm); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
 	if err = og.Build(testobjsNoRoot); err != nil {
@@ -351,7 +350,7 @@ func TestDAGDot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dot failed: %v", err)
 	}
-	if err := ioutil.WriteFile("./testchartsNoRoot.dot", b, os.ModePerm); err != nil {
+	if err := os.WriteFile("./testchartsNoRoot.dot", b, os.ModePerm); err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
 	exec.Command("/bin/bash", "-c", "dot ./testcharts.dot -Tpng -o ./testcharts.png && open ./testcharts.png").Run()
