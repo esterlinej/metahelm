@@ -3,7 +3,7 @@ package metahelm
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/dollarshaveclub/metahelm/pkg/manifest"
@@ -207,7 +207,7 @@ func getlogs(ctx context.Context, namespace, podname string, plopts *corev1.PodL
 		return nil, errors.Wrap(err, "error getting logs")
 	}
 	defer logrc.Close()
-	logs, err := ioutil.ReadAll(logrc)
+	logs, err := io.ReadAll(logrc)
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading logs")
 	}

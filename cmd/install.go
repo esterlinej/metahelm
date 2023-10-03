@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -106,7 +105,7 @@ func validateChart(c ChartDefinition) error {
 }
 
 func readAndValidateFile(f string, validate bool) ([]ChartDefinition, error) {
-	b, err := ioutil.ReadFile(f)
+	b, err := os.ReadFile(f)
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading file")
 	}
@@ -152,7 +151,7 @@ func chartDefToChart(cd ChartDefinition) (metahelm.Chart, error) {
 	var b []byte
 	var err error
 	if cd.ValuesPath != "" {
-		b, err = ioutil.ReadFile(cd.ValuesPath)
+		b, err = os.ReadFile(cd.ValuesPath)
 		if err != nil {
 			return metahelm.Chart{}, errors.Wrap(err, "error reading values file")
 		}
@@ -176,6 +175,10 @@ func chartDefToChart(cd ChartDefinition) (metahelm.Chart, error) {
 		cd.PrimaryDeployment = ""
 		dhi = metahelm.IgnorePodHealth
 	}
+	sanitizeDependencies := []string{}
+	for _, dn := range cd.Dependencies {
+		sanitizeDependencies = append(sanitizeDependencies, strings.ToLower(dn))
+	}
 	return metahelm.Chart{
 		Title:                      cd.Name,
 		Location:                   cd.Path,
@@ -184,7 +187,7 @@ func chartDefToChart(cd ChartDefinition) (metahelm.Chart, error) {
 		WaitUntilDeployment:        cd.PrimaryDeployment,
 		WaitTimeout:                wt,
 		DeploymentHealthIndication: dhi,
-		DependencyList:             cd.Dependencies,
+		DependencyList:             sanitizeDependencies,
 	}, nil
 }
 
@@ -295,6 +298,7 @@ func install(cmd *cobra.Command, args []string) {
 	if err != nil {
 		clierr("error converting chart definitions: %v", err)
 	}
+	instConfig.k8sNS = strings.ToLower(instConfig.k8sNS)
 	cfg, err := getHelmConfig(instConfig.k8sCtx, instConfig.k8sNS, instConfig.restConfig.QPS, instConfig.restConfig.Burst)
 	if err != nil {
 		clierr("error getting Helm config: %v", err)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -58,14 +59,14 @@ type InstallOption func(*options)
 // WithK8sNamespace specifies the kubernetes namespace to install a chart graph into. DefaultK8sNamespace is used otherwise.
 func WithK8sNamespace(ns string) InstallOption {
 	return func(op *options) {
-		op.k8sNamespace = ns
+		op.k8sNamespace = strings.ToLower(ns)
 	}
 }
 
 // WithReleaseNamePrefix specifies a prefix to use in Helm release names (useful for when multiple instances of a chart graph are installed into the same namespace)
 func WithReleaseNamePrefix(pfx string) InstallOption {
 	return func(op *options) {
-		op.releaseNamePrefix = pfx
+		op.releaseNamePrefix = strings.ToLower(pfx)
 	}
 }
 
@@ -146,12 +147,13 @@ func (m *Manager) Upgrade(ctx context.Context, rmap ReleaseMap, charts []Chart, 
 
 // releaseName returns a release name of not more than 53 characters. If the input is truncated, a random number is added to ensure uniqueness.
 func ReleaseName(input string) string {
+	input = strings.ToLower(input)
 	rsl := []rune(input)
 	if len(rsl) < 54 {
 		return input
 	}
 	out := rsl[0 : 53-6]
-	rand.Seed(time.Now().UTC().UnixNano())
+	rand.NewSource(time.Now().UTC().UnixNano())
 	return fmt.Sprintf("%v-%d", string(out), rand.Intn(99999))
 }
 
@@ -393,7 +395,7 @@ func (m *Manager) waitForChart(ctx context.Context, c *Chart, ns string) error {
 func releaseExists(ctx context.Context, cfg *action.Configuration, namespace string, releaseName string) (bool, error) {
 	list := action.NewList(cfg)
 	list.AllNamespaces = true
-	list.Filter = fmt.Sprintf("^%s$", regexp.QuoteMeta(releaseName))
+	list.Filter = fmt.Sprintf("^%s$", regexp.QuoteMeta(strings.ToLower(releaseName)))
 	releases, err := list.Run()
 	if err != nil {
 		return false, fmt.Errorf("error getting release name: %w", err)
