@@ -175,10 +175,6 @@ func chartDefToChart(cd ChartDefinition) (metahelm.Chart, error) {
 		cd.PrimaryDeployment = ""
 		dhi = metahelm.IgnorePodHealth
 	}
-	sanitizeDependencies := []string{}
-	for _, dn := range cd.Dependencies {
-		sanitizeDependencies = append(sanitizeDependencies, strings.ToLower(dn))
-	}
 	return metahelm.Chart{
 		Title:                      cd.Name,
 		Location:                   cd.Path,
@@ -187,7 +183,7 @@ func chartDefToChart(cd ChartDefinition) (metahelm.Chart, error) {
 		WaitUntilDeployment:        cd.PrimaryDeployment,
 		WaitTimeout:                wt,
 		DeploymentHealthIndication: dhi,
-		DependencyList:             sanitizeDependencies,
+		DependencyList:             cd.Dependencies,
 	}, nil
 }
 
